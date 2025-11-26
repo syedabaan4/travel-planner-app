@@ -11,7 +11,7 @@ This workflow is designed to be cross-platform and tool-agnostic (supporting bot
 - **An Oracle SQL Client:** Choose **one** of the following.
 
   - **Option A: SQLcl (Recommended for CLI users)**
-    - **Action:** [Download SQLcl](https://www.oracle.com/database/sqldeveloper/technologies/sqlcl/). Unzip it, find `sql.exe` (Windows) or `sql` (Linux/macOS), and place it in your project's root directory.
+    - **Action:** [Download SQLcl](https://www.oracle.com/database/sqldeveloper/technologies/sqlcl/). Unzip it, and place the **folder** in the project's root directory.
 
   - **Option B: SQL Developer (Recommended for GUI users)**
     - **Action:** [Download and install SQL Developer](https://www.oracle.com/database/sqldeveloper/technologies/sql-developer-downloads/).
@@ -53,14 +53,16 @@ To sync your database with the latest changes from Git, run the master setup scr
 
 #### Method A: Using SQLcl (Command Line)
 
-Run the following command from your project's root directory.
+Run the following command from `sqlcl/bin/`
 
 ```bash
 # On Windows PowerShell:
-.\sql SYSTEM/mysecretpassword@localhost:1521/FREEPDB1 @db/setup.sql
+cd travel-planner-app/db
+../sqlcl/bin/sql SYSTEM/mysecretpassword@localhost:1521/FREEPDB1 @setup.sql
 
 # On Linux or macOS:
-./sql SYSTEM/mysecretpassword@localhost:1521/FREEPDB1 @db/setup.sql
+cd travel-planner-app/db
+../sqlcl/bin/sql SYSTEM/mysecretpassword@localhost:1521/FREEPDB1 @setup.sql
 ```
 
 #### Method B: Using SQL Developer (GUI)
