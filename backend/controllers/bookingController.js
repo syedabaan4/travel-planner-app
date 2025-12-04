@@ -57,7 +57,28 @@ async function getBookingById(req, res) {
   }
 }
 
-// Create booking from catalog
+// Get booking cost breakdown
+async function getBookingTotal(req, res) {
+  try {
+    const bookingId = req.params.id;
+    const total = await bookingModel.calculateBookingTotal(bookingId);
+    res.json(total);
+  } catch (error) {
+    console.error("Error calculating booking total:", error);
+    // Handle specific Oracle errors
+    if (error.message.includes("ORA-20005")) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+    res
+      .status(500)
+      .json({
+        message: "Error calculating booking total",
+        error: error.message,
+      });
+  }
+}
+
+// Create booking from catalog using stored procedure
 async function createBookingFromCatalog(req, res) {
   try {
     const {
@@ -78,7 +99,7 @@ async function createBookingFromCatalog(req, res) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
-    const bookingId = await bookingModel.createBookingFromCatalog({
+    const result = await bookingModel.createBookingFromCatalog({
       customerId,
       catalogId,
       bookingDescription,
@@ -89,10 +110,28 @@ async function createBookingFromCatalog(req, res) {
 
     res.status(201).json({
       message: "Booking created successfully",
-      bookingId,
+      bookingId: result.bookingId,
+      totalCost: result.totalCost,
     });
   } catch (error) {
     console.error("Error creating booking:", error);
+    // Handle specific Oracle errors from stored procedure
+    if (error.message.includes("ORA-20001")) {
+      return res.status(404).json({ message: "Customer not found" });
+    }
+    if (error.message.includes("ORA-20002")) {
+      return res.status(404).json({ message: "Catalog package not found" });
+    }
+    if (error.message.includes("ORA-20003")) {
+      return res
+        .status(400)
+        .json({ message: "Check-out date must be after check-in date" });
+    }
+    if (error.message.includes("ORA-20004")) {
+      return res
+        .status(400)
+        .json({ message: "Check-in date cannot be in the past" });
+    }
     res
       .status(500)
       .json({ message: "Error creating booking", error: error.message });
@@ -115,11 +154,9 @@ async function createCustomBooking(req, res) {
     }
 
     if (!hotels && !transport && !food) {
-      return res
-        .status(400)
-        .json({
-          message: "At least one service (hotel/transport/food) is required",
-        });
+      return res.status(400).json({
+        message: "At least one service (hotel/transport/food) is required",
+      });
     }
 
     const bookingId = await bookingModel.createCustomBooking({
@@ -142,7 +179,45 @@ async function createCustomBooking(req, res) {
   }
 }
 
-// Update booking status
+// Cancel booking using stored procedure
+async function cancelBooking(req, res) {
+  try {
+    const bookingId = req.params.id;
+    const { reason } = req.body;
+
+    // Get booking to check ownership
+    const booking = await bookingModel.getBookingById(bookingId);
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    // If customer role, ensure they can only cancel their own booking
+    if (req.user.role === "customer" && req.user.id != booking.customerId) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    const result = await bookingModel.cancelBooking(bookingId, reason);
+
+    res.json({
+      message: "Booking cancelled successfully",
+      refundIssued: result.refundIssued,
+    });
+  } catch (error) {
+    console.error("Error cancelling booking:", error);
+    // Handle specific Oracle errors from stored procedure
+    if (error.message.includes("ORA-20005")) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+    if (error.message.includes("ORA-20012")) {
+      return res.status(400).json({ message: "Booking is already cancelled" });
+    }
+    res
+      .status(500)
+      .json({ message: "Error cancelling booking", error: error.message });
+  }
+}
+
+// Update booking status (admin only - for manual status changes)
 async function updateBookingStatus(req, res) {
   try {
     const bookingId = req.params.id;
@@ -196,8 +271,10 @@ module.exports = {
   getAllBookings,
   getCustomerBookings,
   getBookingById,
+  getBookingTotal,
   createBookingFromCatalog,
   createCustomBooking,
+  cancelBooking,
   updateBookingStatus,
   deleteBooking,
 };

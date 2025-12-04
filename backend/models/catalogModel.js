@@ -1,14 +1,19 @@
 const db = require("../config/db");
+const oracledb = require("oracledb");
 
-// Get all catalog packages
+// Get all catalog packages with full details using VW_CATALOG_FULL_DETAILS view
 async function getAllCatalogs() {
   let connection;
   try {
     connection = await db.getConnection();
     const result = await connection.execute(
       `SELECT catalogId, packageName, destination, description, noOfDays,
-              budget, departure, arrival
-       FROM Catalog
+              budget, departure, arrival,
+              totalHotels, totalHotelCost,
+              totalTransports, totalTransportCost,
+              totalFoodPlans, totalFoodCost,
+              calculatedTotalCost
+       FROM VW_CATALOG_FULL_DETAILS
        ORDER BY catalogId`,
     );
     return result.rows.map((row) => ({
@@ -20,6 +25,13 @@ async function getAllCatalogs() {
       budget: row[5],
       departure: row[6],
       arrival: row[7],
+      totalHotels: row[8],
+      totalHotelCost: row[9],
+      totalTransports: row[10],
+      totalTransportCost: row[11],
+      totalFoodPlans: row[12],
+      totalFoodCost: row[13],
+      calculatedTotalCost: row[14],
     }));
   } finally {
     if (connection) await connection.close();
@@ -32,11 +44,15 @@ async function getCatalogById(catalogId) {
   try {
     connection = await db.getConnection();
 
-    // Get catalog details
+    // Get catalog details from view
     const catalogResult = await connection.execute(
       `SELECT catalogId, packageName, destination, description, noOfDays,
-              budget, departure, arrival
-       FROM Catalog
+              budget, departure, arrival,
+              totalHotels, totalHotelCost,
+              totalTransports, totalTransportCost,
+              totalFoodPlans, totalFoodCost,
+              calculatedTotalCost
+       FROM VW_CATALOG_FULL_DETAILS
        WHERE catalogId = :id`,
       [catalogId],
     );
@@ -53,6 +69,13 @@ async function getCatalogById(catalogId) {
       budget: row[5],
       departure: row[6],
       arrival: row[7],
+      totalHotels: row[8],
+      totalHotelCost: row[9],
+      totalTransports: row[10],
+      totalTransportCost: row[11],
+      totalFoodPlans: row[12],
+      totalFoodCost: row[13],
+      calculatedTotalCost: row[14],
     };
 
     // Get associated hotels

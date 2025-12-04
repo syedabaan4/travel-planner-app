@@ -145,10 +145,43 @@ async function deleteCustomer(customerId) {
   }
 }
 
+// Get customer summary using VW_CUSTOMER_BOOKING_SUMMARY view
+async function getCustomerSummary(customerId) {
+  let connection;
+  try {
+    connection = await db.getConnection();
+    const result = await connection.execute(
+      `SELECT customerId, name, email, phone, username,
+              totalBookings, confirmedBookings, cancelledBookings,
+              totalSpent, customerTier
+       FROM VW_CUSTOMER_BOOKING_SUMMARY
+       WHERE customerId = :id`,
+      [customerId],
+    );
+    if (result.rows.length === 0) return null;
+    const row = result.rows[0];
+    return {
+      customerId: row[0],
+      name: row[1],
+      email: row[2],
+      phone: row[3],
+      username: row[4],
+      totalBookings: row[5],
+      confirmedBookings: row[6],
+      cancelledBookings: row[7],
+      totalSpent: row[8],
+      customerTier: row[9],
+    };
+  } finally {
+    if (connection) await connection.close();
+  }
+}
+
 module.exports = {
   getAllCustomers,
   getCustomerById,
   getCustomerByUsername,
+  getCustomerSummary,
   createCustomer,
   updateCustomer,
   deleteCustomer,

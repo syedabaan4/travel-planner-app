@@ -13,10 +13,13 @@ router.get(
   paymentController.getPaymentByBookingId,
 );
 
-// Create payment
-router.post("/", verifyToken, paymentController.createPayment);
+// Process payment (creates a pending payment with calculated amount)
+router.post("/process", verifyToken, paymentController.processPayment);
 
-// Update payment status (admin only)
+// Complete payment (marks as completed and confirms booking)
+router.post("/:id/complete", verifyToken, paymentController.completePayment);
+
+// Update payment status (admin only - for manual status changes like refunds)
 router.patch(
   "/:id/status",
   verifyToken,

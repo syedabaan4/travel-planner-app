@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Travel Planner API",
-    "description": "API Collection for Travel Planner Platform",
+    "description": "API Collection for Travel Planner Platform - Updated for Stored Procedures & Views",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -80,10 +80,73 @@
       ]
     },
     {
+      "name": "Customers",
+      "item": [
+        {
+          "name": "Get All Customers (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:3001/api/customers",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "customers"]
+            }
+          }
+        },
+        {
+          "name": "Get Customer Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customer_token}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:3001/api/customers/1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "customers", "1"]
+            }
+          }
+        },
+        {
+          "name": "Get Customer Summary (View)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customer_token}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:3001/api/customers/1/summary",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "customers", "1", "summary"]
+            },
+            "description": "Uses VW_CUSTOMER_BOOKING_SUMMARY view to get customer stats and tier"
+          }
+        }
+      ]
+    },
+    {
       "name": "Catalogs",
       "item": [
         {
-          "name": "Get All Catalogs",
+          "name": "Get All Catalogs (View)",
           "request": {
             "method": "GET",
             "url": {
@@ -92,7 +155,8 @@
               "host": ["localhost"],
               "port": "3001",
               "path": ["api", "catalogs"]
-            }
+            },
+            "description": "Uses VW_CATALOG_FULL_DETAILS view to get catalogs with calculated costs"
           }
         },
         {
@@ -125,6 +189,33 @@
               "path": ["api", "hotels"]
             }
           }
+        },
+        {
+          "name": "Get Hotel Availability (View)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:3001/api/hotels/availability",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "hotels", "availability"]
+            },
+            "description": "Uses VW_HOTEL_AVAILABILITY view to get real-time availability"
+          }
+        },
+        {
+          "name": "Get Hotel By ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:3001/api/hotels/1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "hotels", "1"]
+            }
+          }
         }
       ]
     },
@@ -132,7 +223,85 @@
       "name": "Bookings",
       "item": [
         {
-          "name": "Create Booking from Catalog",
+          "name": "Get All Bookings (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:3001/api/bookings",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "bookings"]
+            },
+            "description": "Uses VW_BOOKING_DETAILS view for comprehensive booking data"
+          }
+        },
+        {
+          "name": "Get Customer Bookings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customer_token}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:3001/api/bookings/customer/1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "bookings", "customer", "1"]
+            }
+          }
+        },
+        {
+          "name": "Get Booking By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customer_token}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:3001/api/bookings/{{booking_id}}",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "bookings", "{{booking_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Booking Total (Stored Procedure)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customer_token}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:3001/api/bookings/{{booking_id}}/total",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "bookings", "{{booking_id}}", "total"]
+            },
+            "description": "Uses SP_CALCULATE_BOOKING_TOTAL to get cost breakdown"
+          }
+        },
+        {
+          "name": "Create Booking from Catalog (Stored Procedure)",
           "request": {
             "method": "POST",
             "header": [
@@ -142,7 +311,7 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer YOUR_TOKEN_HERE"
+                "value": "Bearer {{customer_token}}"
               }
             ],
             "body": {
@@ -155,10 +324,282 @@
               "host": ["localhost"],
               "port": "3001",
               "path": ["api", "bookings", "catalog"]
+            },
+            "description": "Uses SP_CREATE_BOOKING_FROM_CATALOG stored procedure"
+          }
+        },
+        {
+          "name": "Create Custom Booking",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customer_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": 1,\n  \"bookingDescription\": \"Custom trip to Lahore\",\n  \"hotels\": [\n    {\n      \"hotelId\": 2,\n      \"roomsBooked\": 1,\n      \"checkIn\": \"2025-12-15\",\n      \"checkOut\": \"2025-12-17\"\n    }\n  ],\n  \"transport\": [\n    {\n      \"transportId\": 1,\n      \"seatsBooked\": 2,\n      \"travelDate\": \"2025-12-15\"\n    }\n  ],\n  \"food\": [\n    {\n      \"foodId\": 1,\n      \"quantity\": 2\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/bookings/custom",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "bookings", "custom"]
+            }
+          }
+        },
+        {
+          "name": "Cancel Booking (Stored Procedure)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customer_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Change of plans\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/bookings/{{booking_id}}/cancel",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "bookings", "{{booking_id}}", "cancel"]
+            },
+            "description": "Uses SP_CANCEL_BOOKING stored procedure with refund handling"
+          }
+        },
+        {
+          "name": "Update Booking Status (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"confirmed\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/bookings/{{booking_id}}/status",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "bookings", "{{booking_id}}", "status"]
             }
           }
         }
       ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "Get All Payments (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:3001/api/payments",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "payments"]
+            }
+          }
+        },
+        {
+          "name": "Get Payment by Booking ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customer_token}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:3001/api/payments/booking/{{booking_id}}",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "payments", "booking", "{{booking_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Process Payment (Stored Procedure)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customer_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bookingId\": \"{{booking_id}}\",\n  \"method\": \"credit_card\",\n  \"transactionId\": \"TXN123456\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/payments/process",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "payments", "process"]
+            },
+            "description": "Uses SP_PROCESS_PAYMENT - creates pending payment with calculated amount"
+          }
+        },
+        {
+          "name": "Complete Payment (Stored Procedure)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customer_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transactionId\": \"TXN123456_COMPLETE\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/payments/{{payment_id}}/complete",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "payments", "{{payment_id}}", "complete"]
+            },
+            "description": "Uses SP_COMPLETE_PAYMENT - marks payment completed and confirms booking"
+          }
+        },
+        {
+          "name": "Update Payment Status (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"refunded\",\n  \"transactionId\": \"REFUND123\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/payments/{{payment_id}}/status",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "payments", "{{payment_id}}", "status"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reports (Admin)",
+      "item": [
+        {
+          "name": "Get Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:3001/api/reports/dashboard",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "reports", "dashboard"]
+            },
+            "description": "Get summary stats for admin dashboard"
+          }
+        },
+        {
+          "name": "Get Revenue Report (View)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:3001/api/reports/revenue",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "reports", "revenue"]
+            },
+            "description": "Uses VW_REVENUE_REPORT view for monthly revenue analytics"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "customer_token",
+      "value": "YOUR_CUSTOMER_JWT_TOKEN"
+    },
+    {
+      "key": "admin_token",
+      "value": "YOUR_ADMIN_JWT_TOKEN"
+    },
+    {
+      "key": "booking_id",
+      "value": "YOUR_BOOKING_ID"
+    },
+    {
+      "key": "payment_id",
+      "value": "YOUR_PAYMENT_ID"
     }
   ]
 }

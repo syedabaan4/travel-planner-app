@@ -1,5 +1,5 @@
 const db = require("../config/db");
-const { generateUUID } = require("../middlewares/helpers");
+const oracledb = require("oracledb");
 
 // Get all payments (admin only)
 async function getAllPayments() {
@@ -56,34 +56,72 @@ async function getPaymentByBookingId(bookingId) {
   }
 }
 
-// Create payment
-async function createPayment(paymentData) {
+// Process payment using stored procedure SP_PROCESS_PAYMENT
+// This creates a pending payment with calculated amount from booking
+async function processPayment(bookingId, method, transactionId = null) {
   let connection;
   try {
     connection = await db.getConnection();
-    const paymentId = generateUUID();
 
-    await connection.execute(
-      `INSERT INTO Payment (paymentId, bookingId, amount, method, status, transactionId)
-       VALUES (:paymentId, :bookingId, :amount, :method, :status, :transactionId)`,
+    const result = await connection.execute(
+      `BEGIN
+         SP_PROCESS_PAYMENT(
+           p_booking_id => :bookingId,
+           p_method => :method,
+           p_transaction_id => :transactionId,
+           p_payment_id => :paymentId,
+           p_amount => :amount
+         );
+       END;`,
       {
-        paymentId,
-        bookingId: paymentData.bookingId,
-        amount: paymentData.amount,
-        method: paymentData.method,
-        status: paymentData.status || "pending",
-        transactionId: paymentData.transactionId || null,
+        bookingId,
+        method,
+        transactionId,
+        paymentId: {
+          dir: oracledb.BIND_OUT,
+          type: oracledb.STRING,
+          maxSize: 36,
+        },
+        amount: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
       },
-      { autoCommit: true },
     );
 
-    return paymentId;
+    return {
+      paymentId: result.outBinds.paymentId,
+      amount: result.outBinds.amount,
+    };
   } finally {
     if (connection) await connection.close();
   }
 }
 
-// Update payment status
+// Complete payment using stored procedure SP_COMPLETE_PAYMENT
+// This marks payment as completed and confirms the booking
+async function completePayment(paymentId, transactionId = null) {
+  let connection;
+  try {
+    connection = await db.getConnection();
+
+    await connection.execute(
+      `BEGIN
+         SP_COMPLETE_PAYMENT(
+           p_payment_id => :paymentId,
+           p_transaction_id => :transactionId
+         );
+       END;`,
+      {
+        paymentId,
+        transactionId,
+      },
+    );
+
+    return true;
+  } finally {
+    if (connection) await connection.close();
+  }
+}
+
+// Update payment status (for manual status changes like refunds)
 async function updatePaymentStatus(paymentId, status, transactionId = null) {
   let connection;
   try {
@@ -109,6 +147,7 @@ async function updatePaymentStatus(paymentId, status, transactionId = null) {
 module.exports = {
   getAllPayments,
   getPaymentByBookingId,
-  createPayment,
+  processPayment,
+  completePayment,
   updatePaymentStatus,
 };

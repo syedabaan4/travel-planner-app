@@ -12,6 +12,7 @@ const transportRoutes = require("./routes/transportRoutes");
 const foodRoutes = require("./routes/foodRoutes");
 const bookingRoutes = require("./routes/bookingRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
+const reportRoutes = require("./routes/reportRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -45,6 +46,7 @@ app.get("/", (req, res) => {
       food: "/api/food",
       bookings: "/api/bookings",
       payments: "/api/payments",
+      reports: "/api/reports",
     },
   });
 });
@@ -58,6 +60,7 @@ app.use("/api/transport", transportRoutes);
 app.use("/api/food", foodRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/payments", paymentRoutes);
+app.use("/api/reports", reportRoutes);
 
 // 404 Handler
 app.use((req, res) => {

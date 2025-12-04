@@ -16,6 +16,9 @@ router.get(
 // Get booking by ID
 router.get("/:id", verifyToken, bookingController.getBookingById);
 
+// Get booking cost breakdown
+router.get("/:id/total", verifyToken, bookingController.getBookingTotal);
+
 // Create booking from catalog
 router.post(
   "/catalog",
@@ -32,10 +35,18 @@ router.post(
   bookingController.createCustomBooking,
 );
 
-// Update booking status (admin can update any, customer can cancel their own)
-router.patch("/:id/status", verifyToken, bookingController.updateBookingStatus);
+// Cancel booking (customer can cancel their own, admin can cancel any)
+router.post("/:id/cancel", verifyToken, bookingController.cancelBooking);
 
-// Delete booking
-router.delete("/:id", verifyToken, bookingController.deleteBooking);
+// Update booking status (admin only - for manual status changes)
+router.patch(
+  "/:id/status",
+  verifyToken,
+  isAdmin,
+  bookingController.updateBookingStatus,
+);
+
+// Delete booking (admin only)
+router.delete("/:id", verifyToken, isAdmin, bookingController.deleteBooking);
 
 module.exports = router;

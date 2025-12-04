@@ -1,4 +1,5 @@
 const db = require("../config/db");
+const oracledb = require("oracledb");
 
 // Get all hotels
 async function getAllHotels() {
@@ -112,9 +113,35 @@ async function deleteHotel(hotelId) {
   }
 }
 
+// Get hotel availability using VW_HOTEL_AVAILABILITY view
+async function getHotelAvailability() {
+  let connection;
+  try {
+    connection = await db.getConnection();
+    const result = await connection.execute(
+      `SELECT hotelId, hotelName, hotelAddress, totalRooms, pricePerNight,
+              currentlyBookedRooms, availableRoomsNow
+       FROM VW_HOTEL_AVAILABILITY
+       ORDER BY hotelId`,
+    );
+    return result.rows.map((row) => ({
+      hotelId: row[0],
+      hotelName: row[1],
+      hotelAddress: row[2],
+      totalRooms: row[3],
+      pricePerNight: row[4],
+      currentlyBookedRooms: row[5],
+      availableRoomsNow: row[6],
+    }));
+  } finally {
+    if (connection) await connection.close();
+  }
+}
+
 module.exports = {
   getAllHotels,
   getHotelById,
+  getHotelAvailability,
   createHotel,
   updateHotel,
   deleteHotel,

@@ -32,6 +32,20 @@ async function getHotelById(req, res) {
   }
 }
 
+// Get hotel availability (uses VW_HOTEL_AVAILABILITY view)
+async function getHotelAvailability(req, res) {
+  try {
+    const availability = await hotelModel.getHotelAvailability();
+    res.json(availability);
+  } catch (error) {
+    console.error("Error fetching hotel availability:", error);
+    res.status(500).json({
+      message: "Error fetching hotel availability",
+      error: error.message,
+    });
+  }
+}
+
 // Create hotel (admin only)
 async function createHotel(req, res) {
   try {
@@ -99,6 +113,7 @@ async function deleteHotel(req, res) {
 module.exports = {
   getAllHotels,
   getHotelById,
+  getHotelAvailability,
   createHotel,
   updateHotel,
   deleteHotel,

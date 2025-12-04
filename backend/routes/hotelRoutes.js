@@ -5,6 +5,7 @@ const { verifyToken, isAdmin } = require("../middlewares/auth");
 
 // Public routes
 router.get("/", hotelController.getAllHotels);
+router.get("/availability", hotelController.getHotelAvailability);
 router.get("/:id", hotelController.getHotelById);
 
 // Admin only routes

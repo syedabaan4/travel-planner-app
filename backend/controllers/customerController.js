@@ -38,6 +38,34 @@ async function getCustomerProfile(req, res) {
   }
 }
 
+// Get customer summary with booking stats and tier (uses VW_CUSTOMER_BOOKING_SUMMARY view)
+async function getCustomerSummary(req, res) {
+  try {
+    const customerId = req.params.id;
+
+    // If customer role, ensure they can only access their own summary
+    if (req.user.role === "customer" && req.user.id != customerId) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    const summary = await customerModel.getCustomerSummary(customerId);
+
+    if (!summary) {
+      return res.status(404).json({ message: "Customer not found" });
+    }
+
+    res.json(summary);
+  } catch (error) {
+    console.error("Error fetching customer summary:", error);
+    res
+      .status(500)
+      .json({
+        message: "Error fetching customer summary",
+        error: error.message,
+      });
+  }
+}
+
 // Update customer profile
 async function updateCustomer(req, res) {
   try {
@@ -84,6 +112,7 @@ async function deleteCustomer(req, res) {
 module.exports = {
   getAllCustomers,
   getCustomerProfile,
+  getCustomerSummary,
   updateCustomer,
   deleteCustomer,
 };

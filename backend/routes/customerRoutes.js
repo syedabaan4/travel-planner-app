@@ -9,6 +9,9 @@ router.get("/", verifyToken, isAdmin, customerController.getAllCustomers);
 // Get customer profile (own profile or admin)
 router.get("/:id", verifyToken, customerController.getCustomerProfile);
 
+// Get customer summary with booking stats and tier (uses view)
+router.get("/:id/summary", verifyToken, customerController.getCustomerSummary);
+
 // Update customer profile
 router.put("/:id", verifyToken, customerController.updateCustomer);
 
