@@ -4,6 +4,14 @@ This document outlines the standard workflow for setting up and managing the Ora
 
 This workflow is designed to be cross-platform and tool-agnostic (supporting both SQLcl and SQL Developer).
 
+> **Database Objects Summary:**
+> - 15 Tables (including Audit_Log)
+> - 5 Views
+> - 5 Stored Procedures
+> - 5 Triggers
+>
+> For detailed documentation, see [docs/DATABASE_DESIGN.md](docs/DATABASE_DESIGN.md)
+
 ## 1. Prerequisites
 
 - **Git:** For version control.
@@ -118,11 +126,14 @@ PROMPT 'Old schema dropped.';
 
 CREATE USER travel_planner IDENTIFIED BY travel_password;
 ALTER USER travel_planner QUOTA UNLIMITED ON users;
-GRANT CONNECT, RESOURCE, CREATE VIEW TO travel_planner;
+GRANT CONNECT, RESOURCE, CREATE VIEW, CREATE PROCEDURE, CREATE TRIGGER TO travel_planner;
 PROMPT 'Application user "travel_planner" created.';
 
 PROMPT 'Running migration scripts...';
 @migrations/01_create_tables.sql;
+@migrations/02_views.sql;
+@migrations/03_procedures.sql;
+@migrations/04_triggers.sql;
 
 PROMPT 'Running seed scripts...';
 @seed/01_add_sample_data.sql;
@@ -133,22 +144,16 @@ PROMPT 'Database setup complete!';
 /
 ```
 
-### Table Creation Script: `db/migrations/01_create_tables.sql`
-*(Note: The full content is in the actual file. This is a summary for readability.)*
-```sql
--- FILE: db/migrations/01_create_tables.sql
-PROMPT 'Creating tables in travel_planner schema...';
+### Migration Scripts: `db/migrations/`
 
-CREATE TABLE travel_planner.Customer (
-    customerId NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    -- ... columns ...
-);
+The migrations folder contains the following scripts (run in order):
 
--- ... (and all other CREATE TABLE statements with schema prefixes) ...
-
-PROMPT 'All tables created successfully.';
-/
-```
+| File | Description |
+|------|-------------|
+| `01_create_tables.sql` | Creates all 15 tables with constraints |
+| `02_views.sql` | Creates 5 views for reporting and analytics |
+| `03_procedures.sql` | Creates 5 stored procedures for business logic |
+| `04_triggers.sql` | Creates 5 triggers for validation and auditing |
 
 ### Sample Data Script: `db/seed/01_add_sample_data.sql`
 *(Note: The full content is in the actual file. This is a summary for readability.)*
@@ -166,7 +171,43 @@ PROMPT 'Sample data inserted successfully.';
 /
 ```
 
-## 7. Commands Cheatsheet
+## 7. Database Object Summary
+
+### Tables (15)
+| Category | Tables |
+|----------|--------|
+| Core | Customer, Admin, Catalog, Hotel, Transport, Food, Booking, Payment |
+| Junction | Catalog_Hotel, Catalog_Transport, Catalog_Food, Booking_Hotel, Booking_Transport, Booking_Food |
+| Audit | Audit_Log |
+
+### Views (5)
+| View | Purpose |
+|------|---------|
+| VW_CATALOG_FULL_DETAILS | Package details with calculated costs |
+| VW_BOOKING_DETAILS | Full booking information with totals |
+| VW_CUSTOMER_BOOKING_SUMMARY | Customer stats & loyalty tier |
+| VW_REVENUE_REPORT | Monthly revenue analytics |
+| VW_HOTEL_AVAILABILITY | Real-time room availability |
+
+### Stored Procedures (5)
+| Procedure | Purpose |
+|-----------|---------|
+| SP_CREATE_BOOKING_FROM_CATALOG | Create booking from a package (atomic) |
+| SP_CALCULATE_BOOKING_TOTAL | Calculate cost breakdown |
+| SP_PROCESS_PAYMENT | Create payment for booking |
+| SP_COMPLETE_PAYMENT | Complete payment & confirm booking |
+| SP_CANCEL_BOOKING | Cancel booking & handle refund |
+
+### Triggers (5)
+| Trigger | Purpose |
+|---------|---------|
+| TRG_BOOKING_AUDIT | Log all booking changes |
+| TRG_AUTO_CONFIRM_ON_PAYMENT | Auto-confirm booking on payment |
+| TRG_PREVENT_DOUBLE_BOOKING | Prevent hotel overbooking |
+| TRG_CUSTOMER_EMAIL_LOWERCASE | Normalize email to lowercase |
+| TRG_CASCADE_BOOKING_CANCEL | Update payments on cancellation |
+
+## 8. Commands Cheatsheet
 - **Create Container:** `docker run -d --name oracle-free -p 1521:1521 -e ORACLE_PASSWORD=mysecretpassword -v oracle-db-data:/opt/oracle/oradata gvenzl/oracle-free`
 - **Start/Stop Container:** `docker start oracle-free`, `docker stop oracle-free`
 - **Reset DB (CLI):** `.\sql SYSTEM/mysecretpassword@localhost:1521/FREEPDB1 @db/setup.sql`
