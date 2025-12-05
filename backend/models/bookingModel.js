@@ -121,9 +121,10 @@ async function getBookingById(bookingId) {
     // Get associated hotels
     const hotelsResult = await connection.execute(
       `SELECT h.hotelId, h.hotelName, h.hotelAddress, h.rent,
-              bh.roomsBooked, bh.checkIn, bh.checkOut
-       FROM Hotel h
-       JOIN Booking_Hotel bh ON h.hotelId = bh.hotelId
+              bh.roomsBooked, bh.checkIn, bh.checkOut,
+              (h.rent * bh.roomsBooked * (bh.checkOut - bh.checkIn)) AS totalCost
+       FROM travel_planner.Hotel h
+       JOIN travel_planner.Booking_Hotel bh ON h.hotelId = bh.hotelId
        WHERE bh.bookingId = :id`,
       [bookingId],
     );
@@ -135,14 +136,16 @@ async function getBookingById(bookingId) {
       roomsBooked: r[4],
       checkIn: r[5],
       checkOut: r[6],
+      totalCost: r[7],
     }));
 
     // Get associated transport
     const transportResult = await connection.execute(
       `SELECT t.transportId, t.type, t.fare,
-              bt.seatsBooked, bt.travelDate
-       FROM Transport t
-       JOIN Booking_Transport bt ON t.transportId = bt.transportId
+              bt.seatsBooked, bt.travelDate,
+              (t.fare * bt.seatsBooked) AS totalCost
+       FROM travel_planner.Transport t
+       JOIN travel_planner.Booking_Transport bt ON t.transportId = bt.transportId
        WHERE bt.bookingId = :id`,
       [bookingId],
     );
@@ -152,13 +155,15 @@ async function getBookingById(bookingId) {
       fare: r[2],
       seatsBooked: r[3],
       travelDate: r[4],
+      totalCost: r[5],
     }));
 
     // Get associated food
     const foodResult = await connection.execute(
-      `SELECT f.foodId, f.meals, f.price, bf.quantity
-       FROM Food f
-       JOIN Booking_Food bf ON f.foodId = bf.foodId
+      `SELECT f.foodId, f.meals, f.price, bf.quantity,
+              (f.price * bf.quantity) AS totalCost
+       FROM travel_planner.Food f
+       JOIN travel_planner.Booking_Food bf ON f.foodId = bf.foodId
        WHERE bf.bookingId = :id`,
       [bookingId],
     );
@@ -167,6 +172,7 @@ async function getBookingById(bookingId) {
       meals: r[1],
       price: r[2],
       quantity: r[3],
+      totalCost: r[4],
     }));
 
     // Get payment info

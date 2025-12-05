@@ -89,6 +89,8 @@ async function processPayment(bookingId, method, transactionId = null) {
     return {
       paymentId: result.outBinds.paymentId,
       amount: result.outBinds.amount,
+      transactionId,
+      method,
     };
   } finally {
     if (connection) await connection.close();

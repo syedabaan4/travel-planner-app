@@ -102,40 +102,106 @@ PROMPT 'Trigger TRG_AUTO_CONFIRM_ON_PAYMENT created.';
 -- WHY: Demonstrates business rule validation - prevents overbooking
 -- ============================================================================
 CREATE OR REPLACE TRIGGER travel_planner.TRG_PREVENT_DOUBLE_BOOKING
-BEFORE INSERT ON travel_planner.Booking_Hotel
-FOR EACH ROW
-DECLARE
-    v_total_rooms NUMBER;
-    v_booked_rooms NUMBER;
-    v_hotel_name VARCHAR2(200);
-BEGIN
-    -- Get hotel info
-    SELECT hotelName, availableRooms INTO v_hotel_name, v_total_rooms
-    FROM travel_planner.Hotel
-    WHERE hotelId = :NEW.hotelId;
+FOR INSERT ON travel_planner.Booking_Hotel
+COMPOUND TRIGGER
 
-    -- Count rooms already booked for overlapping dates
-    SELECT NVL(SUM(bh.roomsBooked), 0) INTO v_booked_rooms
-    FROM travel_planner.Booking_Hotel bh
-    JOIN travel_planner.Booking b ON bh.bookingId = b.bookingId
-    WHERE bh.hotelId = :NEW.hotelId
-    AND b.status IN ('pending', 'confirmed')
-    AND (
-        -- Check for date overlap
-        (:NEW.checkIn >= bh.checkIn AND :NEW.checkIn < bh.checkOut)
-        OR (:NEW.checkOut > bh.checkIn AND :NEW.checkOut <= bh.checkOut)
-        OR (:NEW.checkIn <= bh.checkIn AND :NEW.checkOut >= bh.checkOut)
+    -- Store rows inserted in the current statement to avoid ORA-04091
+    TYPE t_booking_room IS RECORD (
+        hotelId      travel_planner.Hotel.hotelId%TYPE,
+        checkIn      DATE,
+        checkOut     DATE,
+        roomsBooked  NUMBER
     );
+    TYPE t_booking_room_list IS TABLE OF t_booking_room INDEX BY PLS_INTEGER;
+    g_new_rows t_booking_room_list;
 
-    -- Check if enough rooms are available
-    IF (v_booked_rooms + :NEW.roomsBooked) > v_total_rooms THEN
-        RAISE_APPLICATION_ERROR(-20030,
-            'Not enough rooms at ' || v_hotel_name ||
-            ' for dates ' || TO_CHAR(:NEW.checkIn, 'YYYY-MM-DD') ||
-            ' to ' || TO_CHAR(:NEW.checkOut, 'YYYY-MM-DD') ||
-            '. Available: ' || (v_total_rooms - v_booked_rooms) ||
-            ', Requested: ' || :NEW.roomsBooked);
-    END IF;
+    -- Helper to sum rooms from this statement for the same hotel and overlap
+    FUNCTION get_new_rooms(
+        p_hotel_id IN travel_planner.Hotel.hotelId%TYPE,
+        p_check_in IN DATE,
+        p_check_out IN DATE
+    ) RETURN NUMBER IS
+        v_total NUMBER := 0;
+    BEGIN
+        IF g_new_rows.COUNT > 0 THEN
+            FOR i IN g_new_rows.FIRST .. g_new_rows.LAST LOOP
+                IF g_new_rows.EXISTS(i) THEN
+                    IF g_new_rows(i).hotelId = p_hotel_id AND (
+                        (p_check_in >= g_new_rows(i).checkIn AND p_check_in < g_new_rows(i).checkOut)
+                        OR (p_check_out > g_new_rows(i).checkIn AND p_check_out <= g_new_rows(i).checkOut)
+                        OR (p_check_in <= g_new_rows(i).checkIn AND p_check_out >= g_new_rows(i).checkOut)
+                    ) THEN
+                        v_total := v_total + g_new_rows(i).roomsBooked;
+                    END IF;
+                END IF;
+            END LOOP;
+        END IF;
+        RETURN v_total;
+    END get_new_rooms;
+
+    BEFORE EACH ROW IS
+    BEGIN
+        g_new_rows(g_new_rows.COUNT + 1) := t_booking_room(
+            :NEW.hotelId,
+            :NEW.checkIn,
+            :NEW.checkOut,
+            :NEW.roomsBooked
+        );
+    END BEFORE EACH ROW;
+
+    AFTER STATEMENT IS
+        v_total_rooms   NUMBER;
+        v_booked_rooms  NUMBER;
+        v_hotel_name    VARCHAR2(200);
+        v_new_rooms     NUMBER;
+        v_existing_rooms NUMBER;
+        v_available     NUMBER;
+    BEGIN
+        IF g_new_rows.COUNT > 0 THEN
+            FOR i IN g_new_rows.FIRST .. g_new_rows.LAST LOOP
+                IF g_new_rows.EXISTS(i) THEN
+                    -- Get hotel info
+                    SELECT hotelName, availableRooms INTO v_hotel_name, v_total_rooms
+                    FROM travel_planner.Hotel
+                    WHERE hotelId = g_new_rows(i).hotelId;
+
+                    -- Count all rooms booked for overlapping dates (includes new rows)
+                    SELECT NVL(SUM(bh.roomsBooked), 0) INTO v_booked_rooms
+                    FROM travel_planner.Booking_Hotel bh
+                    JOIN travel_planner.Booking b ON bh.bookingId = b.bookingId
+                    WHERE bh.hotelId = g_new_rows(i).hotelId
+                    AND b.status IN ('pending', 'confirmed')
+                    AND (
+                        (g_new_rows(i).checkIn >= bh.checkIn AND g_new_rows(i).checkIn < bh.checkOut)
+                        OR (g_new_rows(i).checkOut > bh.checkIn AND g_new_rows(i).checkOut <= bh.checkOut)
+                        OR (g_new_rows(i).checkIn <= bh.checkIn AND g_new_rows(i).checkOut >= bh.checkOut)
+                    );
+
+                    -- Rooms being inserted in this statement for the same window
+                    v_new_rooms := get_new_rooms(
+                        g_new_rows(i).hotelId,
+                        g_new_rows(i).checkIn,
+                        g_new_rows(i).checkOut
+                    );
+
+                    -- Rooms that were already booked before this statement
+                    v_existing_rooms := v_booked_rooms - v_new_rooms;
+                    v_available := v_total_rooms - v_existing_rooms;
+
+                    IF v_booked_rooms > v_total_rooms THEN
+                        RAISE_APPLICATION_ERROR(
+                            -20030,
+                            'Not enough rooms at ' || v_hotel_name ||
+                            ' for dates ' || TO_CHAR(g_new_rows(i).checkIn, 'YYYY-MM-DD') ||
+                            ' to ' || TO_CHAR(g_new_rows(i).checkOut, 'YYYY-MM-DD') ||
+                            '. Available: ' || v_available ||
+                            ', Requested: ' || v_new_rooms
+                        );
+                    END IF;
+                END IF;
+            END LOOP;
+        END IF;
+    END AFTER STATEMENT;
 
 END TRG_PREVENT_DOUBLE_BOOKING;
 /

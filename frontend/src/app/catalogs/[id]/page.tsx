@@ -122,6 +122,15 @@ export default function CatalogDetailPage() {
     router.push(`/bookings/new/catalog/${catalogId}`);
   };
 
+  const handleCustomBook = () => {
+    if (!isAuthenticated) {
+      toast.info("Please login to create a custom booking");
+      router.push("/login");
+      return;
+    }
+    router.push(`/bookings/new/custom?from=catalog&destination=${encodeURIComponent(catalog?.destination || "")}`);
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -339,9 +348,19 @@ export default function CatalogDetailPage() {
               <div className="text-sm text-muted-foreground">
                 Budget: {formatCurrency(catalog.budget)}
               </div>
-              <Button onClick={handleBook} className="w-full" size="lg">
-                Book Now
-              </Button>
+              <div className="flex flex-col gap-2">
+                <Button onClick={handleBook} className="w-full" size="lg">
+                  Book This Package
+                </Button>
+                <Button
+                  onClick={handleCustomBook}
+                  className="w-full"
+                  variant="outline"
+                  size="lg"
+                >
+                  Start a Custom Booking
+                </Button>
+              </div>
               {!isAuthenticated && (
                 <p className="text-xs text-center text-muted-foreground">
                   You need to login to book this package

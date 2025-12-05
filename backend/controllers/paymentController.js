@@ -83,6 +83,8 @@ async function processPayment(req, res) {
       paymentId: result.paymentId,
       amount: result.amount,
       status: "pending",
+      method,
+      transactionId: result.transactionId,
     });
   } catch (error) {
     console.error("Error processing payment:", error);
